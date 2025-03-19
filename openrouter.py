@@ -1,5 +1,9 @@
 import requests
 
+import models
+from custom_types import Model
+from models import models
+
 class ErrorCode:
         valid = 0,
         invalid = 1
@@ -79,7 +83,7 @@ headers = {
 }
 
 data = {
-	'model'    : 'deepseek/deepseek-chat:free',
+        'model'    : models["DeepSeek V3 (free)"].model,
 	'messages' : [{'role' : 'user', 'content' : question}]
 }
 
