@@ -7,4 +7,4 @@ class Model:
         self.free = free
 
     def code_string(self):
-        return " Model(" + "\"" + self.author + "\"" + ", " + "\"" + self.name + "\"" + ", " + "\"" + self.model + "\"" + ", " + str(self.context_size) + ", " + "\"" + str(self.free) + "\"" + ")"
+        return " Model(\"" + self.author + "\", \"" + self.name + "\", \"" + self.model + "\", " + str(self.context_size) + ", " + str(self.free) + ")"
