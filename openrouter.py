@@ -1,8 +1,12 @@
 import requests
+import json
 
 import models
 from custom_types import Model
 from models import models
+
+# TODO(stekap): Remove from global scope when structure becomes more apparent.
+api_url = 'https://openrouter.ai/api/v1/chat/completions'
 
 class ErrorCode:
         valid = 0,
@@ -69,28 +73,53 @@ class Request:
                 }
 
         def extract_response_message(self, response):
-                return response.json()['choices'][0]['message']['content']
-                
+                try:
+                        print(response.json())
+                        return response.json()['choices'][0]['message']['content']
+                except Exception:
+                        return "ERROR"
 
-api_key = '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'
-api_url = 'https://openrouter.ai/api/v1/chat/completions'
+class AIInteraction:
+        def __init__(self, config_file):
+                with open(config_file, "r") as f:
+                        self.config = json.loads(f.read())
 
-question = "This is just an api test. Answer just with one short sentence."
+        def ask(self, model_name, question, stream = True):
+                data = {
+                        "model" : models[model_name].model,
+                        "messages" : [{
+                                "role"    : "user",
+                                "content" : question,
+                                "stream"  : stream
+                        }]
+                }
 
-headers = {
-	'Authorization' : f'Bearer {api_key}',
-	'Content-Type'  : 'application/json'
-}
-
-data = {
-        'model'    : models["DeepSeek V3 (free)"].model,
-	'messages' : [{'role' : 'user', 'content' : question}]
-}
+                response = Request(self.config["api_key"]).send(api_url, data)
+                if response.valid():
+                        print(model_name + ": " + response.message)
+                else:
+                        print(model_name + ": ERROR::NotAvailable")
 
 def main():
-        response = Request(api_key).send(api_url, data)
-        if response.valid():
-                print(response.message)
+        question = "This is just an api test. Answer just with one short sentence."
+        
+        ai = AIInteraction("config.json")
+        ai.ask("DeepSeek V3 (free)", question, False)
+
+        #data = {
+        #        'model'    : models["DeepSeek V3 (free)"].model,
+	#        'messages' : [{'role' : 'user', 'content' : question}]
+        #}
+        #
+        #for free in [value.name for key, value in models.items() if value.free]:
+        #        response = Request(ai.config["api_key"]).send(api_url, data)
+        #        if response.valid():
+        #                try:
+        #                        print(free + ": " + response.message)
+        #                except Exception:
+        #                        print("ERROR: " + free)
+        #                        pass
+        #                break
         
 if __name__ == "__main__":
         main()
