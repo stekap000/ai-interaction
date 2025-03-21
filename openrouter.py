@@ -114,24 +114,37 @@ class AIInteraction:
                         "Content-Type"  : "application/json"
                 }
 
+                done = False
                 message_reception = False
                 sse_buffer = ""
                 with requests.post(api_url, headers = headers, json = data, stream = True) as response:
                         for chunk in response.iter_content(chunk_size = 128, decode_unicode = True):
-                                #print("----------------------------------------------------------------------------")
-                                #print(chunk)
-                                #sse_buffer += chunk
+                                if done:
+                                        break
 
-                                #line = sse_buffer[:line_end].strip()
-                                #sse_buffer = sse_buffer[line_end + 1:]
-
+                                prior_length = len(sse_buffer)
+                                sse_buffer += chunk
+                                
                                 if not message_reception:
-                                        content_index = chunk.find("\"content\"")
+                                        content_index = sse_buffer.find("\"content\"")
                                         if content_index != -1:
-                                                sse_buffer += chunk[content_index + 9:]
+                                                temp = sse_buffer[content_index + 11:]
+                                                sse_buffer = ""
+                                                sse_buffer += temp
+                                                print(sse_buffer)
                                                 message_reception = True
+                                else:
+                                        refusal_index = sse_buffer.find("\"refusal\"")
+                                        if refusal_index != -1:
+                                                sse_buffer = sse_buffer[:(refusal_index - 2)]
+                                                if refusal_index > prior_length:
+                                                        print(chunk[:(refusal_index - prior_length - 2)])
+                                                
+                                                done = True
+                                        else:
+                                                print(chunk)
 
-                #print(json.loads(sse_buffer)["choices"][0]["message"]["content"])
+                print("buffer: " + sse_buffer)
                 
         def stream_test(self, model_name):
                 data = {
@@ -157,7 +170,7 @@ class AIInteraction:
                                 #print(response.headers)
                                 #print("SIZE: " + str(len(list(chunk))))
                                 #print(list(chunk))
-                                #print(chunk)
+                                print(chunk)
                                 
                                 while True:
                                         try:
