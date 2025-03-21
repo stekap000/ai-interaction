@@ -74,7 +74,6 @@ class Request:
 
         def extract_response_message(self, response):
                 try:
-                        print(response.json())
                         return response.json()['choices'][0]['message']['content']
                 except Exception:
                         return "ERROR"
@@ -100,11 +99,112 @@ class AIInteraction:
                 else:
                         print(model_name + ": ERROR::NotAvailable")
 
+        def json_stream_test(self, model_name):
+                data = {
+                        "model" : models[model_name].model,
+                        "messages" : [{
+                                "role"    : "user",
+                                "content" : "What is the meaning of life?",
+                                "stream"  : True
+                        }]
+                }
+                        
+                headers = {
+                        "Authorization" : f"Bearer {self.config['api_key']}",
+                        "Content-Type"  : "application/json"
+                }
+
+                message_reception = False
+                sse_buffer = ""
+                with requests.post(api_url, headers = headers, json = data, stream = True) as response:
+                        for chunk in response.iter_content(chunk_size = 128, decode_unicode = True):
+                                #print("----------------------------------------------------------------------------")
+                                #print(chunk)
+                                #sse_buffer += chunk
+
+                                #line = sse_buffer[:line_end].strip()
+                                #sse_buffer = sse_buffer[line_end + 1:]
+
+                                if not message_reception:
+                                        content_index = chunk.find("\"content\"")
+                                        if content_index != -1:
+                                                sse_buffer += chunk[content_index + 9:]
+                                                message_reception = True
+
+                #print(json.loads(sse_buffer)["choices"][0]["message"]["content"])
+                
+        def stream_test(self, model_name):
+                data = {
+                        "model" : models[model_name].model,
+                        "messages" : [{
+                                "role"    : "user",
+                                #"content" : "This is just an api test. Answer just with one short sentence.",
+                                "content" : "What is the meaning of life?",
+                                "stream"  : True
+                        }]
+                }
+                
+                headers = {
+                        "Authorization" : f"Bearer {self.config['api_key']}",
+                        "Content-Type"  : "application/json"
+                }
+
+                # Server is using Server Side Events
+                sse_buffer = ""
+                with requests.post(api_url, headers = headers, json = data, stream = True) as response:
+                        for chunk in response.iter_content(chunk_size = 128, decode_unicode = True):
+                                sse_buffer += chunk
+                                #print(response.headers)
+                                #print("SIZE: " + str(len(list(chunk))))
+                                #print(list(chunk))
+                                #print(chunk)
+                                
+                                while True:
+                                        try:
+                                                line_end = sse_buffer.find("\n")
+                                                if line_end == -1:
+                                                        break
+                
+                                                line = sse_buffer[:line_end].strip()
+                                                sse_buffer = sse_buffer[line_end + 1:]
+                                                
+                                                if line.startswith("data: "):
+                                                        data = line[6:]
+                                                        if data == "[DONE]":
+                                                                break
+                                                        
+                                                        try:
+                                                                data_obj = json.loads(data)
+                                                                content = data_obj["choices"][0]["delta"].get("content")
+                                                                if content:
+                                                                        print(content, end = "", flush = True)
+                                                        except json.JSONDecodeError as e:
+                                                                print(e)
+                                                                
+                                        except Exception as e:
+                                                print(e)
+                                                break
+                                        
 def main():
         question = "This is just an api test. Answer just with one short sentence."
         
         ai = AIInteraction("config.json")
-        ai.ask("DeepSeek V3 (free)", question, False)
+        #ai.ask("DeepSeek V3 (free)", question, False)
+
+        #free_models_names = [value.name for key, value in models.items() if value.free]
+        #print("Free models count: " + str(len(free_models_names)))
+        #for name in free_models_names:
+        #        try:
+        #                print(name)
+        #        except Exception:
+        #                pass
+
+        for name in [value.name for key, value in models.items() if value.author.startswith("deepseek")]:
+                print(name)
+
+        # ai.stream_test("DeepSeek R1 Zero (free)")
+        #ai.stream_test("Llama 3.1 Nemotron 70B Instruct (free)")
+        ai.json_stream_test("DeepSeek V3 (free)")
 
         #data = {
         #        'model'    : models["DeepSeek V3 (free)"].model,
