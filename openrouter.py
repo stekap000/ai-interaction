@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 
 import models
 from custom_types import Model
@@ -78,26 +79,58 @@ class Request:
                 except Exception:
                         return "ERROR"
 
+class Conversation:
+        def __init__(self, name, messages):
+                self.name = name
+                self.messages = messages
+
+        @staticmethod
+        def existing(name):
+                path = "conversations/" + name + ".json"
+                if os.path.isfile(path):
+                        with open(path, "r") as f:
+                                json_data = json.loads(f.read())
+                                return Conversation(json_data["name"], json_data["messages"])
+                return Conversation("", [])
+
+        def save_new(self, name):
+                path = "conversations/" + name + ".json"
+                with open(path, "w") as f:
+                        f.write(json.dumps(self.__dict__, indent = 4))
+
+        def save_existing(self):
+                self.save(self.name)
+
 class AIInteraction:
         def __init__(self, config_file):
                 with open(config_file, "r") as f:
                         self.config = json.loads(f.read())
 
-        def ask(self, model_name, question, stream = True):
+        def ask(self, model_name, prompt, conversation_name = "", stream = False):
+                conversation = Conversation.existing(conversation_name)
+
+                conversation.messages.append({
+                        "role"    : "user",
+                        "content" : prompt,
+                })
+
                 data = {
-                        "model" : models[model_name].model,
-                        "messages" : [{
-                                "role"    : "user",
-                                "content" : question,
-                                "stream"  : stream
-                        }]
+                        "model"    : models[model_name].model,
+                        "messages" : conversation.messages,
+                        "stream"   : stream
                 }
 
                 response = Request(self.config["api_key"]).send(api_url, data)
                 if response.valid():
-                        print(model_name + ": " + response.message)
+                        conversation.messages.append({
+                                "role" : "assistant",
+                                "content" : response.message,
+                        })
                 else:
-                        print(model_name + ": ERROR::NotAvailable")
+                        return Conversation("", [])
+                #print(model_name + ": ERROR::NotAvailable")
+
+                return conversation
 
         def json_stream_test(self, model_name):
                 data = {
@@ -167,11 +200,7 @@ class AIInteraction:
                 with requests.post(api_url, headers = headers, json = data, stream = True) as response:
                         for chunk in response.iter_content(chunk_size = 128, decode_unicode = True):
                                 sse_buffer += chunk
-                                #print(response.headers)
-                                #print("SIZE: " + str(len(list(chunk))))
-                                #print(list(chunk))
-                                print(chunk)
-                                
+
                                 while True:
                                         try:
                                                 line_end = sse_buffer.find("\n")
@@ -199,10 +228,13 @@ class AIInteraction:
                                                 break
                                         
 def main():
-        question = "This is just an api test. Answer just with one short sentence."
-        
+        prompt = "This is just an api test. Answer just with one short sentence."
+
         ai = AIInteraction("config.json")
-        #ai.ask("DeepSeek V3 (free)", question, False)
+        #conversation = ai.ask("DeepSeek V3 (free)", prompt, "", False)
+        #conversation.save_new("Test Conversation")
+        #conversation = ai.ask("DeepSeek V3 (free)", "Did I ever say that this is an API test? I am asking because I don't remember ever saying it.", "Test Conversation", False)
+        #print(conversation.messages)
 
         #free_models_names = [value.name for key, value in models.items() if value.free]
         #print("Free models count: " + str(len(free_models_names)))
@@ -212,27 +244,12 @@ def main():
         #        except Exception:
         #                pass
 
-        for name in [value.name for key, value in models.items() if value.author.startswith("deepseek")]:
-                print(name)
+        #for name in [value.name for key, value in models.items() if value.author.startswith("deepseek")]:
+        #        print(name)
 
         # ai.stream_test("DeepSeek R1 Zero (free)")
         #ai.stream_test("Llama 3.1 Nemotron 70B Instruct (free)")
-        ai.json_stream_test("DeepSeek V3 (free)")
-
-        #data = {
-        #        'model'    : models["DeepSeek V3 (free)"].model,
-	#        'messages' : [{'role' : 'user', 'content' : question}]
-        #}
-        #
-        #for free in [value.name for key, value in models.items() if value.free]:
-        #        response = Request(ai.config["api_key"]).send(api_url, data)
-        #        if response.valid():
-        #                try:
-        #                        print(free + ": " + response.message)
-        #                except Exception:
-        #                        print("ERROR: " + free)
-        #                        pass
-        #                break
+        #ai.json_stream_test("DeepSeek V3 (free)")
         
 if __name__ == "__main__":
         main()
