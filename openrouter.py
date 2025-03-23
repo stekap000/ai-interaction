@@ -80,7 +80,7 @@ class Request:
                         return "ERROR"
 
 class Conversation:
-        def __init__(self, name, messages):
+        def __init__(self, name = "", messages = []):
                 self.name = name
                 self.messages = messages
 
@@ -92,6 +92,12 @@ class Conversation:
                                 json_data = json.loads(f.read())
                                 return Conversation(json_data["name"], json_data["messages"])
                 return Conversation("", [])
+
+        @staticmethod
+        def print_all():
+                print("Existing conversations:")
+                for i, name in enumerate(os.listdir("conversations")):
+                        print(f"\t{i + 1}. {name[:name.find('.')]}")
 
         def save_new(self, name):
                 path = "conversations/" + name + ".json"
@@ -106,9 +112,7 @@ class AIInteraction:
                 with open(config_file, "r") as f:
                         self.config = json.loads(f.read())
 
-        def ask(self, model_name, prompt, conversation_name = "", stream = False):
-                conversation = Conversation.existing(conversation_name)
-
+        def ask(self, model_name, prompt, conversation = Conversation("", []), stream = False):
                 conversation.messages.append({
                         "role"    : "user",
                         "content" : prompt,
@@ -128,7 +132,6 @@ class AIInteraction:
                         })
                 else:
                         return Conversation("", [])
-                #print(model_name + ": ERROR::NotAvailable")
 
                 return conversation
 
@@ -228,28 +231,40 @@ class AIInteraction:
                                                 break
                                         
 def main():
-        prompt = "This is just an api test. Answer just with one short sentence."
+        # TODO(stekap): Print ai output nicely so that it always start at the same offset from the left console edge.
+        
+        Conversation.print_all()
+        interaction = AIInteraction("config.json")
 
-        ai = AIInteraction("config.json")
-        #conversation = ai.ask("DeepSeek V3 (free)", prompt, "", False)
-        #conversation.save_new("Test Conversation")
-        #conversation = ai.ask("DeepSeek V3 (free)", "Did I ever say that this is an API test? I am asking because I don't remember ever saying it.", "Test Conversation", False)
-        #print(conversation.messages)
-
-        #free_models_names = [value.name for key, value in models.items() if value.free]
-        #print("Free models count: " + str(len(free_models_names)))
-        #for name in free_models_names:
-        #        try:
-        #                print(name)
-        #        except Exception:
-        #                pass
-
-        #for name in [value.name for key, value in models.items() if value.author.startswith("deepseek")]:
-        #        print(name)
-
-        # ai.stream_test("DeepSeek R1 Zero (free)")
-        #ai.stream_test("Llama 3.1 Nemotron 70B Instruct (free)")
-        #ai.json_stream_test("DeepSeek V3 (free)")
+        running = True
+        prompting = False
+        
+        while running:
+                command = input("O=={=====> ").lower()
+                if command == "exit":
+                        running = False
+                elif command == "help":
+                        pass
+                elif command == "new":
+                        prompting = True
+                        conversation = Conversation()
+                        while prompting:
+                                prompt = input("         > ").lower()
+                                
+                                if prompt == "exit":
+                                        prompting = False
+                                        break
+                                
+                                conversation = interaction.ask("DeepSeek V3 (free)", prompt, conversation, False)
+                                print(f"(^_^)      {conversation.messages[-1]['content']}")
+                                
+                elif command.startswith("use"):
+                        #conversation = Conversation.existing(conversation.name)
+                        pass
+                elif command.startswith("list"):
+                        # list conversations
+                        # list models
+                        pass
         
 if __name__ == "__main__":
         main()
