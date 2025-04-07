@@ -79,6 +79,8 @@ class Request:
                 except Exception:
                         return "ERROR"
 
+# TODO(stekap): Add topic (and maybe some other things like date) to the conversation so that we can filter
+#               conversations based on that.
 class Conversation:
         def __init__(self, name = "", messages = []):
                 self.name = name
@@ -250,6 +252,21 @@ class AIInteraction:
                                                 print(e)
                                                 break
 
+
+class Command:
+        @staticmethod
+        def clear():
+                os.system("cls" if os.name == "nt" else "clear")
+
+        @staticmethod
+        def help():
+                print("Commands:")
+                print("\tnew   - Start a new conversation.")
+                print("\tsave  - Save new conversation that was previously started.")
+                print("\told   - Continue old conversation.")
+                print("\tclear - Clear terminal/console.")
+                print("\thelp  - Show this help text.")
+
 class Prompt:
         @staticmethod
         def start(interaction, conversation, new_conversation):
@@ -259,11 +276,12 @@ class Prompt:
                         
                         if prompt.lower() == "back":
                                 return True
-                        
-                        if prompt.lower() == "exit":
+                        elif prompt.lower() == "exit":
                                 return False
-                        
-                        if prompt.lower() == "save":
+                        elif prompt.lower() == "clear":
+                                Command.clear()
+                                continue
+                        elif prompt.lower() == "save":
                                 if new_conversation:
                                         conversation.save_new(input("Conversation Name: "))
                                 else:
@@ -276,9 +294,13 @@ class Prompt:
                         response = conversation.messages[-1]["content"]
                         print(response)
                         print("")
-                                
+
 def main():
-        os.system("cls" if os.name == "nt" else "clear")
+        # TODO(stekap): Maybe call commands like this, where command string maps to function string
+        #               since in that case, we won't have a ton of if checks.
+        # Command.__dict__["clear"].__get__(Command)()
+        
+        Command.clear()
         
         Conversation.print_all()
         interaction = AIInteraction("config.json")
@@ -291,12 +313,7 @@ def main():
                 if command == "exit":
                         running = False
                 elif command == "help":
-                        print("Commands:")
-                        print("\tnew  - Start a new conversation.")
-                        print("\tsave - Save new conversation that was previously started.")
-                        print("\told  - Continue old conversation.")
-                        print("\thelp - Show this help text.")
-                        pass
+                        Command.help()
                 elif command == "new":
                         conversation = Conversation()
                         running = Prompt.start(interaction, conversation, True)
@@ -312,7 +329,7 @@ def main():
                         # list models
                         pass
                 elif command.startswith("clear"):
-                        os.system("cls" if os.name == "nt" else "clear")
+                        Command.clear()
                         pass
         
 if __name__ == "__main__":
