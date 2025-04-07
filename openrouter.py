@@ -100,6 +100,7 @@ class Conversation:
                         print(f"\t{i + 1}. {name[:name.find('.')]}")
 
         def save_new(self, name):
+                self.name = name
                 path = "conversations/" + name + ".json"
                 with open(path, "w") as f:
                         f.write(json.dumps(self.__dict__, indent = 4))
@@ -277,6 +278,8 @@ class Prompt:
                         print("")
                                 
 def main():
+        os.system("cls" if os.name == "nt" else "clear")
+        
         Conversation.print_all()
         interaction = AIInteraction("config.json")
 
@@ -299,7 +302,7 @@ def main():
                         running = Prompt.start(interaction, conversation, True)
                 elif command.startswith("old"):
                         conversation = Conversation.existing(input("Conversation Name: "))
-                        print(conversation.name)
+                        print("")
                         conversation.print_content()
                         running = Prompt.start(interaction, conversation, False)
                 elif command.startswith("delete"):
@@ -307,6 +310,9 @@ def main():
                 elif command.startswith("list"):
                         # list conversations
                         # list models
+                        pass
+                elif command.startswith("clear"):
+                        os.system("cls" if os.name == "nt" else "clear")
                         pass
         
 if __name__ == "__main__":
