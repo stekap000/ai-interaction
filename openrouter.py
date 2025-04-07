@@ -105,7 +105,26 @@ class Conversation:
                         f.write(json.dumps(self.__dict__, indent = 4))
 
         def save_existing(self):
-                self.save(self.name)
+                self.save_new(self.name)
+
+        def messages_content(self):
+                return [message["content"] for message in self.messages]
+
+        def print_content(self):
+                for message in self.messages:
+                        if message["role"] == "user":
+                                print("   ######   ")
+                                print("  ##    ##  ")
+                                print(" ##  ME  ## ")
+                                print("  ##    ##  ")
+                                print("   ######   ")
+                        elif message["role"] == "assistant":
+                                print("   ######   ")
+                                print("  ##    ##  ")
+                                print(" ##  AI  ## ")
+                                print("  ##    ##  ")
+                                print("   ######   ")
+                        print("\n" + message["content"] + "\n")
 
 class AIInteraction:
         def __init__(self, config_file):
@@ -229,7 +248,34 @@ class AIInteraction:
                                         except Exception as e:
                                                 print(e)
                                                 break
-                                        
+
+class Prompt:
+        @staticmethod
+        def start(interaction, conversation, new_conversation):
+                prompting = True
+                while prompting:
+                        prompt = input("(conversation) > ")
+                        
+                        if prompt.lower() == "back":
+                                return True
+                        
+                        if prompt.lower() == "exit":
+                                return False
+                        
+                        if prompt.lower() == "save":
+                                if new_conversation:
+                                        conversation.save_new(input("Conversation Name: "))
+                                else:
+                                        conversation.save_existing()
+                                print("Saved.")
+                                continue
+                        
+                        print("")
+                        conversation = interaction.ask("DeepSeek V3 (free)", prompt, conversation, False)
+                        response = conversation.messages[-1]["content"]
+                        print(response)
+                        print("")
+                                
 def main():
         Conversation.print_all()
         interaction = AIInteraction("config.json")
@@ -238,7 +284,7 @@ def main():
         prompting = False
         
         while running:
-                command = input("H > ").lower()
+                command = input("(initial) > ").lower()
                 if command == "exit":
                         running = False
                 elif command == "help":
@@ -249,32 +295,13 @@ def main():
                         print("\thelp - Show this help text.")
                         pass
                 elif command == "new":
-                        prompting = True
                         conversation = Conversation()
-                        while prompting:
-                                prompt = input("(conversation) H > ")
-
-                                if prompt.lower() == "back":
-                                        break;
-                                
-                                if prompt.lower() == "exit":
-                                        running = False
-                                        break
-
-                                if prompt.lower() == "save":
-                                        conversation.save_new(input("Conversation Name: "))
-                                        print("Saved.")
-                                        continue
-
-                                print("")
-                                conversation = interaction.ask("DeepSeek V3 (free)", prompt, conversation, False)
-                                response = conversation.messages[-1]["content"]
-                                print(response)
-                                print("")
-                                
+                        running = Prompt.start(interaction, conversation, True)
                 elif command.startswith("old"):
-                        #conversation = Conversation.existing(conversation.name)
-                        pass
+                        conversation = Conversation.existing(input("Conversation Name: "))
+                        print(conversation.name)
+                        conversation.print_content()
+                        running = Prompt.start(interaction, conversation, False)
                 elif command.startswith("delete"):
                         pass
                 elif command.startswith("list"):
