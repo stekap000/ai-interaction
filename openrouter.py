@@ -231,8 +231,6 @@ class AIInteraction:
                                                 break
                                         
 def main():
-        # TODO(stekap): Print ai output nicely so that it always start at the same offset from the left console edge.
-        
         Conversation.print_all()
         interaction = AIInteraction("config.json")
 
@@ -240,26 +238,44 @@ def main():
         prompting = False
         
         while running:
-                command = input("O=={=====> ").lower()
+                command = input("H > ").lower()
                 if command == "exit":
                         running = False
                 elif command == "help":
+                        print("Commands:")
+                        print("\tnew  - Start a new conversation.")
+                        print("\tsave - Save new conversation that was previously started.")
+                        print("\told  - Continue old conversation.")
+                        print("\thelp - Show this help text.")
                         pass
                 elif command == "new":
                         prompting = True
                         conversation = Conversation()
                         while prompting:
-                                prompt = input("         > ").lower()
+                                prompt = input("(conversation) H > ")
+
+                                if prompt.lower() == "back":
+                                        break;
                                 
-                                if prompt == "exit":
-                                        prompting = False
+                                if prompt.lower() == "exit":
+                                        running = False
                                         break
-                                
+
+                                if prompt.lower() == "save":
+                                        conversation.save_new(input("Conversation Name: "))
+                                        print("Saved.")
+                                        continue
+
+                                print("")
                                 conversation = interaction.ask("DeepSeek V3 (free)", prompt, conversation, False)
-                                print(f"(^_^)      {conversation.messages[-1]['content']}")
+                                response = conversation.messages[-1]["content"]
+                                print(response)
+                                print("")
                                 
-                elif command.startswith("use"):
+                elif command.startswith("old"):
                         #conversation = Conversation.existing(conversation.name)
+                        pass
+                elif command.startswith("delete"):
                         pass
                 elif command.startswith("list"):
                         # list conversations
