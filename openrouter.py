@@ -308,6 +308,8 @@ class Prompt:
                         print(response)
                         print("")
 
+# TODO(stekap): Join together command checks for inside and outside of conversation by explicitly tracking
+#               the conversation state in CLI.
 class CLI:
         def __init__(self, interaction):
                 self.interaction = interaction
@@ -339,8 +341,8 @@ class CLI:
                         elif command.startswith("delete"):
                                 pass
                         elif command.startswith("list"):
-                                # list conversations
-                                # list models
+                                Conversation.print_all()
+                                # TODO(stekap): List models.
                                 pass
                         elif command.startswith("clear"):
                                 Command.clear()
