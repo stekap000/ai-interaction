@@ -101,6 +101,9 @@ class Conversation:
                 for i, name in enumerate(os.listdir("conversations")):
                         print(f"\t{i + 1}. {name[:name.find('.')]}")
 
+        def empty(self):
+                return self.name == "" and self.messages == []
+
         def save_new(self, name):
                 self.name = name
                 path = "conversations/" + name + ".json"
@@ -267,6 +270,13 @@ class Command:
                 print("\tclear - Clear terminal/console.")
                 print("\thelp  - Show this help text.")
 
+        @staticmethod
+        def execute(command):
+                try:
+                        Command.__dict__[command].__get__(Command)()
+                except Exception:
+                        pass
+
 class Prompt:
         @staticmethod
         def start(interaction, conversation, new_conversation):
@@ -280,6 +290,9 @@ class Prompt:
                                 return False
                         elif prompt.lower() == "clear":
                                 Command.clear()
+                                continue
+                        elif prompt.lower() == "help":
+                                Command.help()
                                 continue
                         elif prompt.lower() == "save":
                                 if new_conversation:
@@ -295,42 +308,45 @@ class Prompt:
                         print(response)
                         print("")
 
-def main():
-        # TODO(stekap): Maybe call commands like this, where command string maps to function string
-        #               since in that case, we won't have a ton of if checks.
-        # Command.__dict__["clear"].__get__(Command)()
-        
-        Command.clear()
-        
-        Conversation.print_all()
-        interaction = AIInteraction("config.json")
+class CLI:
+        def __init__(self, interaction):
+                self.interaction = interaction
 
-        running = True
-        prompting = False
-        
-        while running:
-                command = input("(initial) > ").lower()
-                if command == "exit":
-                        running = False
-                elif command == "help":
-                        Command.help()
-                elif command == "new":
-                        conversation = Conversation()
-                        running = Prompt.start(interaction, conversation, True)
-                elif command.startswith("old"):
-                        conversation = Conversation.existing(input("Conversation Name: "))
-                        print("")
-                        conversation.print_content()
-                        running = Prompt.start(interaction, conversation, False)
-                elif command.startswith("delete"):
-                        pass
-                elif command.startswith("list"):
-                        # list conversations
-                        # list models
-                        pass
-                elif command.startswith("clear"):
-                        Command.clear()
-                        pass
+        def start(self):
+                Command.clear()
+                Conversation.print_all()
+
+                running = True
+                prompting = False
+                
+                while running:
+                        command = input("(initial) > ").lower()
+                        if command == "exit":
+                                running = False
+                        elif command == "help":
+                                Command.help()
+                        elif command == "new":
+                                conversation = Conversation()
+                                running = Prompt.start(self.interaction, conversation, True)
+                        elif command.startswith("old"):
+                                conversation = Conversation.existing(input("Conversation Name: "))
+                                if conversation.empty():
+                                        print("Conversation does not exist.")
+                                        continue
+                                print("")
+                                conversation.print_content()
+                                running = Prompt.start(self.interaction, conversation, False)
+                        elif command.startswith("delete"):
+                                pass
+                        elif command.startswith("list"):
+                                # list conversations
+                                # list models
+                                pass
+                        elif command.startswith("clear"):
+                                Command.clear()
+
+def main():
+        CLI(AIInteraction("config.json")).start()
         
 if __name__ == "__main__":
         main()
