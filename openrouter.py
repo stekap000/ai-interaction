@@ -294,6 +294,8 @@ class Prompt:
                         elif prompt.lower() == "help":
                                 Command.help()
                                 continue
+                        elif prompt == "":
+                                continue
                         elif prompt.lower() == "save":
                                 if new_conversation:
                                         conversation.save_new(input("Conversation Name: "))
@@ -313,6 +315,7 @@ class Prompt:
 class CLI:
         def __init__(self, interaction):
                 self.interaction = interaction
+                self.conversation = False
 
         def start(self):
                 Command.clear()
@@ -328,9 +331,11 @@ class CLI:
                         elif command == "help":
                                 Command.help()
                         elif command == "new":
+                                self.conversation = True
                                 conversation = Conversation()
                                 running = Prompt.start(self.interaction, conversation, True)
                         elif command.startswith("old"):
+                                self.conversation = True
                                 conversation = Conversation.existing(input("Conversation Name: "))
                                 if conversation.empty():
                                         print("Conversation does not exist.")
@@ -347,6 +352,8 @@ class CLI:
                         elif command.startswith("clear"):
                                 Command.clear()
 
+# TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
+#               increase the speed of conversation transmission.
 def main():
         CLI(AIInteraction("config.json")).start()
         
