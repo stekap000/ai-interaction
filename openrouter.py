@@ -259,26 +259,37 @@ class AIInteraction:
                                                 break
 
 
-class Command:
-        @staticmethod
-        def clear():
+class CommandHandler:
+        def __init__(self, cli):
+                self.cli = cli
+        
+        def exit(self):
+                self.cli.running = False
+                pass
+        
+        def clear(self):
                 os.system("cls" if os.name == "nt" else "clear")
 
-        @staticmethod
-        def help():
+        def help(self):
                 print("Commands:")
                 print("\tnew   - Start a new conversation.")
                 print("\tsave  - Save new conversation that was previously started.")
                 print("\told   - Continue old conversation.")
                 print("\tclear - Clear terminal/console.")
                 print("\thelp  - Show this help text.")
-
-        @staticmethod
-        def execute(command):
+                print("\tlist  - List existing conversations.")
+                print("\tback  - Go from conversation to initial mode.")
+                print("\texit  - Exit the program.")
+                
+        def list(self):
+                Conversation.print_all();
+                
+        def execute(self, command):
                 try:
-                        Command.__dict__[command].__get__(Command)()
+                        CommandHandler.__dict__[command](self)
+                        return True
                 except Exception:
-                        pass
+                        return False
 
 # TODO(stekap): Maybe add support to go back through multiple states. Currently it is not needed.
 class CLIState:
@@ -290,30 +301,20 @@ class CLI:
                 self.interaction = interaction
                 self.state = CLIState.initial
                 self.conversation = Conversation()
+                self.command_handler = CommandHandler(self)
+                self.running = False
 
         def start(self):
-                Command.clear()
-                Conversation.print_all()
+                self.command_handler.clear()
+                self.command_handler.list()
 
-                running = True
+                self.running = True
                 prompting = False
 
-                while running:
+                while self.running:
                         command = input(f"({'conversation' if self.state == CLIState.conversation else 'initial'}) > ")
 
-                        if command.lower() == "exit":
-                                running = False
-                                continue
-                        elif command.lower() == "clear":
-                                Command.clear()
-                                continue
-                        elif command.lower() == "help":
-                                Command.help()
-                                continue
-                        elif command.lower() == "list":
-                                Conversation.print_all()
-                                continue
-                        elif command == "":
+                        if self.command_handler.execute(command.lower()):
                                 continue
                         
                         if self.state == CLIState.conversation:
