@@ -10,7 +10,7 @@ from models import models
 api_url = 'https://openrouter.ai/api/v1/chat/completions'
 
 class ErrorCode:
-        valid = 0,
+        valid   = 0,
         invalid = 1
 
 class Response:
@@ -101,6 +101,9 @@ class Conversation:
                 for i, name in enumerate(os.listdir("conversations")):
                         print(f"\t{i + 1}. {name[:name.find('.')]}")
 
+        def nameless(self):
+                return self.name == ""
+                        
         def empty(self):
                 return self.name == "" and self.messages == []
 
@@ -277,45 +280,16 @@ class Command:
                 except Exception:
                         pass
 
-class Prompt:
-        @staticmethod
-        def start(interaction, conversation, new_conversation):
-                prompting = True
-                while prompting:
-                        prompt = input("(conversation) > ")
-                        
-                        if prompt.lower() == "back":
-                                return True
-                        elif prompt.lower() == "exit":
-                                return False
-                        elif prompt.lower() == "clear":
-                                Command.clear()
-                                continue
-                        elif prompt.lower() == "help":
-                                Command.help()
-                                continue
-                        elif prompt == "":
-                                continue
-                        elif prompt.lower() == "save":
-                                if new_conversation:
-                                        conversation.save_new(input("Conversation Name: "))
-                                else:
-                                        conversation.save_existing()
-                                print("Saved.")
-                                continue
-                        
-                        print("")
-                        conversation = interaction.ask("DeepSeek V3 (free)", prompt, conversation, False)
-                        response = conversation.messages[-1]["content"]
-                        print(response)
-                        print("")
+# TODO(stekap): Maybe add support to go back through multiple states. Currently it is not needed.
+class CLIState:
+        initial      = 0
+        conversation = 1
 
-# TODO(stekap): Join together command checks for inside and outside of conversation by explicitly tracking
-#               the conversation state in CLI.
 class CLI:
         def __init__(self, interaction):
                 self.interaction = interaction
-                self.conversation = False
+                self.state = CLIState.initial
+                self.conversation = Conversation()
 
         def start(self):
                 Command.clear()
@@ -323,34 +297,59 @@ class CLI:
 
                 running = True
                 prompting = False
-                
+
                 while running:
-                        command = input("(initial) > ").lower()
-                        if command == "exit":
+                        command = input(f"({'conversation' if self.state == CLIState.conversation else 'initial'}) > ")
+
+                        if command.lower() == "exit":
                                 running = False
-                        elif command == "help":
-                                Command.help()
-                        elif command == "new":
-                                self.conversation = True
-                                conversation = Conversation()
-                                running = Prompt.start(self.interaction, conversation, True)
-                        elif command.startswith("old"):
-                                self.conversation = True
-                                conversation = Conversation.existing(input("Conversation Name: "))
-                                if conversation.empty():
-                                        print("Conversation does not exist.")
-                                        continue
-                                print("")
-                                conversation.print_content()
-                                running = Prompt.start(self.interaction, conversation, False)
-                        elif command.startswith("delete"):
-                                pass
-                        elif command.startswith("list"):
-                                Conversation.print_all()
-                                # TODO(stekap): List models.
-                                pass
-                        elif command.startswith("clear"):
+                                continue
+                        elif command.lower() == "clear":
                                 Command.clear()
+                                continue
+                        elif command.lower() == "help":
+                                Command.help()
+                                continue
+                        elif command.lower() == "list":
+                                Conversation.print_all()
+                                continue
+                        elif command == "":
+                                continue
+                        
+                        if self.state == CLIState.conversation:
+                                if command.lower() == "back":
+                                        self.state = CLIState.initial
+                                        self.conversation = Conversation()
+                                        continue
+                                elif command.lower() == "save":
+                                        if self.conversation.nameless():
+                                                self.conversation.save_new(input("Conversation Name: "))
+                                        else:
+                                                self.conversation.save_existing()
+                                        print("Saved.")
+                                        continue
+
+                                print("")
+                                self.conversation = self.interaction.ask("DeepSeek V3 (free)", command, self.conversation, False)
+                                response = self.conversation.messages[-1]["content"]
+                                print(response)
+                                print("")
+                        elif self.state == CLIState.initial:
+                                command = command.lower()
+                                if command == "new":
+                                        self.state = CLIState.conversation
+                                        self.conversation = Conversation()
+                                elif command == "old":
+                                        self.state = CLIState.conversation
+                                        self.conversation = Conversation.existing(input("Conversation Name: "))
+                                        if self.conversation.empty():
+                                                self.state = CLIState.initial
+                                                print("Conversation does not exist.")
+                                                continue
+                                        print("")
+                                        self.conversation.print_content()
+                                elif command == "delete":
+                                        pass
 
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission.
