@@ -1,6 +1,7 @@
 import requests
 import json
 import os
+from datetime import datetime as dt
 
 import models
 from custom_types import Model
@@ -79,12 +80,14 @@ class Request:
                 except Exception:
                         return "ERROR"
 
-# TODO(stekap): Add topic (and maybe some other things like date) to the conversation so that we can filter
-#               conversations based on that.
 class Conversation:
-        def __init__(self, name = "", messages = []):
+        def __init__(self, name = "", messages = [], topic = "", datetime = ""):
                 self.name = name
                 self.messages = messages
+                self.topic = topic
+                self.datetime = datetime
+                if self.datetime == "":
+                        self.datetime = dt.today().strftime("%d.%m.%Y %H:%M")        
 
         @staticmethod
         def existing(name):
@@ -92,8 +95,8 @@ class Conversation:
                 if os.path.isfile(path):
                         with open(path, "r") as f:
                                 json_data = json.loads(f.read())
-                                return Conversation(json_data["name"], json_data["messages"])
-                return Conversation("", [])
+                                return Conversation(json_data["name"], json_data["messages"], json_data["topic"], json_data["datetime"])
+                return Conversation()
 
         @staticmethod
         def print_all():
@@ -107,14 +110,15 @@ class Conversation:
         def empty(self):
                 return self.name == "" and self.messages == []
 
-        def save_new(self, name):
+        def save_new(self, name, topic):
                 self.name = name
+                self.topic = topic
                 path = "conversations/" + name + ".json"
                 with open(path, "w") as f:
                         f.write(json.dumps(self.__dict__, indent = 4))
 
         def save_existing(self):
-                self.save_new(self.name)
+                self.save_new(self.name, self.topic)
 
         def messages_content(self):
                 return [message["content"] for message in self.messages]
@@ -140,7 +144,7 @@ class AIInteraction:
                 with open(config_file, "r") as f:
                         self.config = json.loads(f.read())
 
-        def ask(self, model_name, prompt, conversation = Conversation("", []), stream = False):
+        def ask(self, model_name, prompt, conversation = Conversation(), stream = False):
                 conversation.messages.append({
                         "role"    : "user",
                         "content" : prompt,
@@ -159,7 +163,7 @@ class AIInteraction:
                                 "content" : response.message,
                         })
                 else:
-                        return Conversation("", [])
+                        return Conversation()
 
                 return conversation
 
@@ -324,10 +328,12 @@ class CLI:
                                         continue
                                 elif command.lower() == "save":
                                         if self.conversation.nameless():
-                                                self.conversation.save_new(input("Conversation Name: "))
+                                                name  = input("\tName  : ")
+                                                topic = input("\tTopic : ")
+                                                self.conversation.save_new(name, topic)
                                         else:
                                                 self.conversation.save_existing()
-                                        print("Saved.")
+                                        print("\tSaved.")
                                         continue
 
                                 print("")
@@ -342,10 +348,11 @@ class CLI:
                                         self.conversation = Conversation()
                                 elif command == "old":
                                         self.state = CLIState.conversation
-                                        self.conversation = Conversation.existing(input("Conversation Name: "))
+                                        name = input("\tName : ")
+                                        self.conversation = Conversation.existing(name)
                                         if self.conversation.empty():
                                                 self.state = CLIState.initial
-                                                print("Conversation does not exist.")
+                                                print("\tConversation does not exist.")
                                                 continue
                                         print("")
                                         self.conversation.print_content()
@@ -355,6 +362,7 @@ class CLI:
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission.
 def main():
+        #print(dt.today().strftime("%d.%m.%Y %H:%M"))
         CLI(AIInteraction("config.json")).start()
         
 if __name__ == "__main__":
