@@ -267,26 +267,26 @@ class CommandHandler:
         def __init__(self, cli):
                 self.cli = cli
         
-        def exit(self):
-                self.cli.running = False
-                pass
-        
         def clear(self):
                 os.system("cls" if os.name == "nt" else "clear")
 
-        def help(self):
-                print("Commands:")
-                print("\tnew   - Start a new conversation.")
-                print("\tsave  - Save new conversation that was previously started.")
-                print("\told   - Continue old conversation.")
-                print("\tclear - Clear terminal/console.")
-                print("\thelp  - Show this help text.")
-                print("\tlist  - List existing conversations.")
-                print("\tback  - Go from conversation to initial mode.")
-                print("\texit  - Exit the program.")
-                
         def list(self):
                 Conversation.print_all();
+        
+        def help(self):
+                print("Commands:")
+                print("\tnew    - Start a new conversation.")
+                print("\told    - Continue old conversation.")
+                print("\tsave   - Save new conversation that was previously started.")
+                print("\tdelete - Delete conversation.")
+                print("\tclear  - Clear terminal/console.")
+                print("\tlist   - List existing conversations.")
+                print("\thelp   - Show this help text.")
+                print("\tback   - Go from conversation to initial mode.")
+                print("\texit   - Exit the program.")
+
+        def exit(self):
+                self.cli.running = False
                 
         def execute(self, command):
                 try:
@@ -357,7 +357,14 @@ class CLI:
                                         print("")
                                         self.conversation.print_content()
                                 elif command == "delete":
-                                        pass
+                                        name = input("\tName: ")
+                                        if input(f"\tConversation [{name}] will be deleted. Confirm (y/n) : ") == "y":
+                                                try:
+                                                        os.remove("conversations/" + name + ".json")
+                                                except Exception:
+                                                        print("\tConversation does not exist.")
+                                        else:
+                                                print("\tDeletion canceled.")
 
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission.
