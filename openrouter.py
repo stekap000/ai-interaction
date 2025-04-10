@@ -262,7 +262,6 @@ class AIInteraction:
                                                 print(e)
                                                 break
 
-
 class CommandHandler:
         def __init__(self, cli):
                 self.cli = cli
@@ -367,9 +366,11 @@ class CLI:
                                                 print("\tDeletion canceled.")
 
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
-#               increase the speed of conversation transmission.
+#               increase the speed of conversation transmission. Also, we keep less information locally.
+
+# TODO(stekap): Add UI that can be started with a command, which will display the chat more nicely and correctly display
+#               things like latex.
 def main():
-        #print(dt.today().strftime("%d.%m.%Y %H:%M"))
         CLI(AIInteraction("config.json")).start()
         
 if __name__ == "__main__":
