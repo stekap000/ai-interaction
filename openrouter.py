@@ -139,10 +139,24 @@ class Conversation:
                                 print("   ######   ")
                         print("\n" + message["content"] + "\n")
 
+class Config:
+        def __init__(self, api_key = ""):
+                self.api_key = api_key;
+                        
 class AIInteraction:
         def __init__(self, config_file):
-                with open(config_file, "r") as f:
-                        self.config = json.loads(f.read())
+                try:
+                        with open(config_file, "r") as f:
+                                json_data = json.loads(f.read())
+                                self.config = Config(json_data["api_key"])
+                except FileNotFoundError:
+                        if input("Missing configuration. Create new (y/n): ") == "y":
+                                with open(config_file, "w") as f:
+                                        self.config = Config()
+                                        self.config.api_key = input("API key: ")
+                                        f.write(json.dumps(self.config.__dict__, indent = 4))
+                except Exception:
+                        pass
 
         def ask(self, model_name, prompt, conversation = Conversation(), stream = False):
                 conversation.messages.append({
@@ -156,7 +170,7 @@ class AIInteraction:
                         "stream"   : stream
                 }
 
-                response = Request(self.config["api_key"]).send(api_url, data)
+                response = Request(self.config.api_key).send(api_url, data)
                 if response.valid():
                         conversation.messages.append({
                                 "role" : "assistant",
@@ -178,7 +192,7 @@ class AIInteraction:
                 }
                         
                 headers = {
-                        "Authorization" : f"Bearer {self.config['api_key']}",
+                        "Authorization" : f"Bearer {self.config.api_key}",
                         "Content-Type"  : "application/json"
                 }
 
@@ -226,7 +240,7 @@ class AIInteraction:
                 }
                 
                 headers = {
-                        "Authorization" : f"Bearer {self.config['api_key']}",
+                        "Authorization" : f"Bearer {self.config.api_key}",
                         "Content-Type"  : "application/json"
                 }
 
@@ -309,7 +323,9 @@ class CLI:
 
         def start(self):
                 self.command_handler.clear()
+                print("Enter 'help' for short help manual.\n")
                 self.command_handler.list()
+                print("")
 
                 self.running = True
                 prompting = False
@@ -337,9 +353,14 @@ class CLI:
 
                                 print("")
                                 self.conversation = self.interaction.ask("DeepSeek V3 (free)", command, self.conversation, False)
-                                response = self.conversation.messages[-1]["content"]
-                                print(response)
-                                print("")
+                                
+                                if self.conversation.empty():
+                                        print("AI not available. Returning to initial state.\n")
+                                        self.state = CLIState.initial
+                                else:
+                                        response = self.conversation.messages[-1]["content"]
+                                        print(response)
+                                        print("")
                         elif self.state == CLIState.initial:
                                 command = command.lower()
                                 if command == "new":
