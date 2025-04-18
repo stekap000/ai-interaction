@@ -335,7 +335,7 @@ class CLI:
 
                         if self.command_handler.execute(command.lower()):
                                 continue
-                        
+
                         if self.state == CLIState.conversation:
                                 if command.lower() == "back":
                                         self.state = CLIState.initial
@@ -349,6 +349,8 @@ class CLI:
                                         else:
                                                 self.conversation.save_existing()
                                         print("\tSaved.")
+                                        continue
+                                elif command == "":
                                         continue
 
                                 print("")
