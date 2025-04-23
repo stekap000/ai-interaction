@@ -387,6 +387,11 @@ class CLI:
                                                         print("\tConversation does not exist.")
                                         else:
                                                 print("\tDeletion canceled.")
+                                                
+# TODO(stekap): Add abbreviation to conversations (besides names), so that they can be more easily referenced without
+#               typing the full name.
+
+# TODO(stekap): Add a limit for response waiting and don't include any response that is empty.
 
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission. Also, we keep less information locally.
