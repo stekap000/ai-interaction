@@ -107,6 +107,15 @@ class Conversation:
                 for i, abbreviation in enumerate(os.listdir("conversations")):
                         print(f"\t{i + 1}. {abbreviation[:abbreviation.find('.')]}")
 
+        @staticmethod
+        def info(abbreviation):
+                conversation = Conversation.existing(abbreviation)
+
+                print(f"\tName         : {conversation.name}")
+                print(f"\tAbbreviation : {conversation.abbreviation}")
+                print(f"\tTopic        : {conversation.topic}")
+                print(f"\tDatetime     : {conversation.datetime}")
+        
         def nameless(self):
                 return self.name == "" and self.abbreviation == ""
                         
@@ -296,8 +305,11 @@ class CommandHandler:
                 os.system("cls" if os.name == "nt" else "clear")
 
         def list(self):
-                Conversation.print_all();
-        
+                Conversation.print_all()
+
+        def info(self):
+                Conversation.info(input("\tAbbreviation : "))
+
         def help(self):
                 print("Commands:")
                 print("\tnew    - Start a new conversation.")
@@ -400,12 +412,8 @@ class CLI:
                                                         print("\tConversation does not exist.")
                                         else:
                                                 print("\tDeletion canceled.")
-                                                
-# TODO(stekap): Add abbreviation to conversations (besides names), so that they can be more easily referenced without
-#               typing the full name.
 
-# TODO(stekap): Add a limit for response waiting and don't include any response that is empty.
-
+# TODO(stekap): Available model display and picking with some filters (like free model filter).                                                
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission. Also, we keep less information locally.
 
