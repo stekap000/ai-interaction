@@ -14,7 +14,7 @@ class ErrorCode:
         valid   = 0,
         invalid = 1
 
-class Response:
+class AIResponse:
         def __init__(self, message = "", error_code = 0):
                 self.message = message
                 self.error_code = error_code
@@ -22,9 +22,9 @@ class Response:
         def valid(self):
                 return self.error_code == ErrorCode.valid
 
-class Request:
-        def __init__(self, api_key):
-                self.api_key = api_key
+class AIRequest:
+        def __init__(self, config):
+                self.config = config
                 
                 # self.messages
                 # self.prompt
@@ -56,21 +56,24 @@ class Request:
                 # self.max_price
 
         def send(self, url, json):
-                r = requests.post(url, json = json, headers = self.construct_headers());
+                try:
+                        r = requests.post(url, json = json, headers = self.construct_headers(), timeout = self.config.timeout);
+                        
+                        response = AIResponse()
                 
-                response = Response()
-                
-                if r.status_code == 200:
-                        response.message = self.extract_response_message(r)
-                        response.error_code = ErrorCode.valid
-                else:
-                        response.error_code = ErrorCode.invalid
+                        if r.status_code == 200:
+                                response.message = self.extract_response_message(r)
+                                response.error_code = ErrorCode.valid
+                        else:
+                                response.error_code = ErrorCode.invalid
 
-                return response
+                        return response
+                except requests.exceptions.ReadTimeout:
+                        return AIResponse("", ErrorCode.invalid)
 
         def construct_headers(self):
                 return {
-                        'Authorization' : f'Bearer {self.api_key}',
+                        'Authorization' : f'Bearer {self.config.api_key}',
                         'Content-Type'  : 'application/json'
                 }
 
@@ -140,21 +143,25 @@ class Conversation:
                         print("\n" + message["content"] + "\n")
 
 class Config:
-        def __init__(self, api_key = ""):
+        def __init__(self, api_key = "", timeout = 10):
                 self.api_key = api_key;
+                self.timeout = timeout
                         
 class AIInteraction:
         def __init__(self, config_file):
                 try:
                         with open(config_file, "r") as f:
                                 json_data = json.loads(f.read())
-                                self.config = Config(json_data["api_key"])
+                                self.config = Config(json_data["api_key"], json_data["timeout"])
                 except FileNotFoundError:
                         if input("Missing configuration. Create new (y/n): ") == "y":
                                 with open(config_file, "w") as f:
                                         self.config = Config()
                                         self.config.api_key = input("API key: ")
+                                        # Set default timeout without asking.
+                                        self.config.timeout = 10
                                         f.write(json.dumps(self.config.__dict__, indent = 4))
+                                        print("Configuration created. File name: config.json")
                 except Exception:
                         pass
 
@@ -170,7 +177,8 @@ class AIInteraction:
                         "stream"   : stream
                 }
 
-                response = Request(self.config.api_key).send(api_url, data)
+                # TODO(stekap): Probably make AIRequest a field of AIInteraction, instead of constant new creation.
+                response = AIRequest(self.config).send(api_url, data)
                 if response.valid():
                         conversation.messages.append({
                                 "role" : "assistant",
