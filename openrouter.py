@@ -23,8 +23,8 @@ class AIResponse:
                 return self.error_code == ErrorCode.valid
 
 class AIRequest:
-        def __init__(self, config):
-                self.config = config
+        def __init__(self, interaction):
+                self.interaction = interaction
                 
                 # self.messages
                 # self.prompt
@@ -57,7 +57,7 @@ class AIRequest:
 
         def send(self, url, json):
                 try:
-                        r = requests.post(url, json = json, headers = self.construct_headers(), timeout = self.config.timeout);
+                        r = requests.post(url, json = json, headers = self.construct_headers(), timeout = self.interaction.config.timeout);
                         
                         response = AIResponse()
                 
@@ -73,7 +73,7 @@ class AIRequest:
 
         def construct_headers(self):
                 return {
-                        'Authorization' : f'Bearer {self.config.api_key}',
+                        'Authorization' : f'Bearer {self.interaction.config.api_key}',
                         'Content-Type'  : 'application/json'
                 }
 
@@ -165,6 +165,8 @@ class AIInteraction:
                 except Exception:
                         pass
 
+                self.ai_request = AIRequest(self)
+
         def ask(self, model_name, prompt, conversation = Conversation(), stream = False):
                 conversation.messages.append({
                         "role"    : "user",
@@ -177,8 +179,8 @@ class AIInteraction:
                         "stream"   : stream
                 }
 
-                # TODO(stekap): Probably make AIRequest a field of AIInteraction, instead of constant new creation.
-                response = AIRequest(self.config).send(api_url, data)
+                response = self.ai_request.send(api_url, data)
+                
                 if response.valid():
                         conversation.messages.append({
                                 "role" : "assistant",
