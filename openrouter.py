@@ -7,7 +7,6 @@ import models
 from custom_types import Model
 from models import models
 
-# TODO(stekap): Remove from global scope when structure becomes more apparent.
 api_url = 'https://openrouter.ai/api/v1/chat/completions'
 
 class ErrorCode:
@@ -84,8 +83,9 @@ class AIRequest:
                         return "ERROR"
 
 class Conversation:
-        def __init__(self, name = "", messages = [], topic = "", datetime = ""):
+        def __init__(self, name = "", abbreviation = "", messages = [], topic = "", datetime = ""):
                 self.name = name
+                self.abbreviation = abbreviation
                 self.messages = messages
                 self.topic = topic
                 self.datetime = datetime
@@ -93,35 +93,36 @@ class Conversation:
                         self.datetime = dt.today().strftime("%d.%m.%Y %H:%M")        
 
         @staticmethod
-        def existing(name):
-                path = "conversations/" + name + ".json"
+        def existing(abbreviation):
+                path = "conversations/" + abbreviation + ".json"
                 if os.path.isfile(path):
                         with open(path, "r") as f:
                                 json_data = json.loads(f.read())
-                                return Conversation(json_data["name"], json_data["messages"], json_data["topic"], json_data["datetime"])
+                                return Conversation(json_data["name"], json_data["abbreviation"], json_data["messages"], json_data["topic"], json_data["datetime"])
                 return Conversation()
 
         @staticmethod
         def print_all():
                 print("Existing conversations:")
-                for i, name in enumerate(os.listdir("conversations")):
-                        print(f"\t{i + 1}. {name[:name.find('.')]}")
+                for i, abbreviation in enumerate(os.listdir("conversations")):
+                        print(f"\t{i + 1}. {abbreviation[:abbreviation.find('.')]}")
 
         def nameless(self):
-                return self.name == ""
+                return self.name == "" and self.abbreviation == ""
                         
         def empty(self):
-                return self.name == "" and self.messages == []
+                return self.name == "" and self.abbreviation == "" and self.messages == []
 
-        def save_new(self, name, topic):
+        def save_new(self, name, abbreviation, topic):
                 self.name = name
+                self.abbreviation = abbreviation
                 self.topic = topic
-                path = "conversations/" + name + ".json"
+                path = "conversations/" + abbreviation + ".json"
                 with open(path, "w") as f:
                         f.write(json.dumps(self.__dict__, indent = 4))
 
         def save_existing(self):
-                self.save_new(self.name, self.topic)
+                self.save_new(self.name, self.abbreviation, self.topic)
 
         def messages_content(self):
                 return [message["content"] for message in self.messages]
@@ -179,14 +180,15 @@ class AIInteraction:
                         "stream"   : stream
                 }
 
-                response = self.ai_request.send(api_url, data)
+                ai_response = self.ai_request.send(api_url, data)
                 
-                if response.valid():
+                if ai_response.valid():
                         conversation.messages.append({
                                 "role" : "assistant",
-                                "content" : response.message,
+                                "content" : ai_response.message,
                         })
                 else:
+                        print(f"Model [{model_name}] did not respond.")
                         return Conversation()
 
                 return conversation
@@ -353,9 +355,10 @@ class CLI:
                                         continue
                                 elif command.lower() == "save":
                                         if self.conversation.nameless():
-                                                name  = input("\tName  : ")
-                                                topic = input("\tTopic : ")
-                                                self.conversation.save_new(name, topic)
+                                                name  =        input("\tName         : ")
+                                                abbreviation = input("\tAbbreviation : ")
+                                                topic =        input("\tTopic        : ")
+                                                self.conversation.save_new(name, abbreviation, topic)
                                         else:
                                                 self.conversation.save_existing()
                                         print("\tSaved.")
@@ -380,8 +383,8 @@ class CLI:
                                         self.conversation = Conversation()
                                 elif command == "old":
                                         self.state = CLIState.conversation
-                                        name = input("\tName : ")
-                                        self.conversation = Conversation.existing(name)
+                                        abbreviation = input("\tAbbreviation : ")
+                                        self.conversation = Conversation.existing(abbreviation)
                                         if self.conversation.empty():
                                                 self.state = CLIState.initial
                                                 print("\tConversation does not exist.")
@@ -389,10 +392,10 @@ class CLI:
                                         print("")
                                         self.conversation.print_content()
                                 elif command == "delete":
-                                        name = input("\tName: ")
-                                        if input(f"\tConversation [{name}] will be deleted. Confirm (y/n) : ") == "y":
+                                        abbreviation = input("\tAbbreviation: ")
+                                        if input(f"\tConversation [{abbreviation}] will be deleted. Confirm (y/n) : ") == "y":
                                                 try:
-                                                        os.remove("conversations/" + name + ".json")
+                                                        os.remove("conversations/" + abbreviation + ".json")
                                                 except Exception:
                                                         print("\tConversation does not exist.")
                                         else:
