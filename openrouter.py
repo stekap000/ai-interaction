@@ -156,28 +156,35 @@ class Conversation:
                         print("\n" + message["content"] + "\n")
 
 class Config:
-        def __init__(self, api_key = "", timeout = 10):
+        def __init__(self, api_key = "", timeout = 10, default_model = "DeepSeek V3 (free)"):
                 self.api_key = api_key;
                 self.timeout = timeout
-                        
-class AIInteraction:
-        def __init__(self, config_file):
+                self.default_model = default_model
+
+        @staticmethod
+        def load(config_file):
                 try:
                         with open(config_file, "r") as f:
                                 json_data = json.loads(f.read())
-                                self.config = Config(json_data["api_key"], json_data["timeout"])
+                                return Config(json_data["api_key"], json_data["timeout"], json_data["default_model"])
                 except FileNotFoundError:
                         if input("Missing configuration. Create new (y/n): ") == "y":
                                 with open(config_file, "w") as f:
-                                        self.config = Config()
-                                        self.config.api_key = input("API key: ")
+                                        new_config = Config()
+                                        new_config.api_key = input("\tAPI key: ")
                                         # Set default timeout without asking.
-                                        self.config.timeout = 10
-                                        f.write(json.dumps(self.config.__dict__, indent = 4))
-                                        print("Configuration created. File name: config.json")
-                except Exception:
+                                        new_config.timeout = 10
+                                        new_config.default_model = "DeepSeek V3 (free)"
+                                        print("\tDefault model set to \"DeepSeek V3 (free)\". You can change it after.")
+                                        f.write(json.dumps(new_config.__dict__, indent = 4))
+                                        print("\tConfiguration created. File name: config.json")
+                                        return new_config
+                except:
                         pass
-
+                        
+class AIInteraction:
+        def __init__(self, config):
+                self.config = config
                 self.ai_request = AIRequest(self)
 
         def ask(self, model_name, prompt, conversation = Conversation(), stream = False):
@@ -369,19 +376,14 @@ class CLIState:
         conversation = 1
 
 class CLI:
-        def __init__(self, interaction):
-                self.interaction = interaction
+        def __init__(self, config):
+                self.config = config
+                self.interaction = AIInteraction(config)
                 self.state = CLIState.initial
+                self.current_model = self.config.default_model
                 self.conversation = Conversation()
                 self.command_handler = CommandHandler(self)
                 self.running = False
-
-                try:
-                        with open("config.json", "r") as f:
-                                json_data = json.loads(f.read())
-                                self.current_model = json_data["default_model"]
-                except:
-                        self.current_model = "DeepSeek V3 (free)"
 
         def start(self):
                 self.command_handler.clear()
@@ -452,14 +454,12 @@ class CLI:
                                         else:
                                                 print("\tDeletion canceled.")
 
-# TODO(stekap): Available model display and picking with some filters (like free model filter).                                                
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission. Also, we keep less information locally.
-
 # TODO(stekap): Add UI that can be started with a command, which will display the chat more nicely and correctly display
 #               things like latex.
 def main():
-        CLI(AIInteraction("config.json")).start()
+        CLI(Config.load("config.json")).start()
         
 if __name__ == "__main__":
         main()
