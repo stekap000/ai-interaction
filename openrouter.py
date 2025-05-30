@@ -9,6 +9,8 @@ from models import models
 
 api_url = 'https://openrouter.ai/api/v1/chat/completions'
 
+free_models = dict([(name, model) for name, model in models.items() if model.free])
+
 class ErrorCode:
         valid   = 0,
         invalid = 1
@@ -310,6 +312,11 @@ class CommandHandler:
         def info(self):
                 Conversation.info(input("\tAbbreviation : "))
 
+        def free(self):
+                print(f"Free models (Total Count: {len(free_models)}):")
+                for model in free_models.values():
+                        print(f"\t{model.name}")
+
         def help(self):
                 print("Commands:")
                 print("\tnew    - Start a new conversation.")
@@ -318,6 +325,8 @@ class CommandHandler:
                 print("\tdelete - Delete conversation.")
                 print("\tclear  - Clear terminal/console.")
                 print("\tlist   - List existing conversations.")
+                print("\tfree   - Shows free models.")
+                print("\tinfo   - Shows basic information for some conversation.")
                 print("\thelp   - Show this help text.")
                 print("\tback   - Go from conversation to initial mode.")
                 print("\texit   - Exit the program.")
