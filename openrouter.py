@@ -66,6 +66,7 @@ class AIRequest:
                                 response.message = self.extract_response_message(r)
                                 response.error_code = ErrorCode.valid
                         else:
+                                print(f"Error. Reponse status code: {r.status_code}")
                                 response.error_code = ErrorCode.invalid
 
                         return response
@@ -185,8 +186,14 @@ class AIInteraction:
                         "content" : prompt,
                 })
 
+                # Since we take model parameter from 'slug' when using model grabber, we make sure that the ":free"
+                # is at the end if the model is free, since the api requires this.
+                model_attrib = models[model_name].model
+                if models[model_name].free and ":free" not in model_attrib:
+                        model_attrib += ":free"
+
                 data = {
-                        "model"    : models[model_name].model,
+                        "model"    : model_attrib,
                         "messages" : conversation.messages,
                         "stream"   : stream
                 }
@@ -317,6 +324,19 @@ class CommandHandler:
                 for model in free_models.values():
                         print(f"\t{model.name}")
 
+        def models(self):
+                print(f"Available models (Total Count: {len(models)}):")
+                for model in models.values():
+                        print(f"\t{model.name}")      
+
+        def model(self):
+                print(f"Current model: {self.cli.current_model}")
+                new_model = input("\tNew model: ")
+                if new_model in models:
+                        self.cli.current_model = new_model
+                else:
+                        print("\tGiven model doesn't exist.")
+
         def help(self):
                 print("Commands:")
                 print("\tnew    - Start a new conversation.")
@@ -326,6 +346,8 @@ class CommandHandler:
                 print("\tclear  - Clear terminal/console.")
                 print("\tlist   - List existing conversations.")
                 print("\tfree   - Shows free models.")
+                print("\tmodels - Shows all models.")
+                print("\tmodel  - Shows the current model and offers the change of the current model.")
                 print("\tinfo   - Shows basic information for some conversation.")
                 print("\thelp   - Show this help text.")
                 print("\tback   - Go from conversation to initial mode.")
@@ -354,9 +376,17 @@ class CLI:
                 self.command_handler = CommandHandler(self)
                 self.running = False
 
+                try:
+                        with open("config.json", "r") as f:
+                                json_data = json.loads(f.read())
+                                self.current_model = json_data["default_model"]
+                except:
+                        self.current_model = "DeepSeek V3 (free)"
+
         def start(self):
                 self.command_handler.clear()
                 print("Enter 'help' for short help manual.\n")
+                print(f"Current model: {self.current_model}\n")
                 self.command_handler.list()
                 print("")
 
@@ -388,7 +418,7 @@ class CLI:
                                         continue
 
                                 print("")
-                                self.conversation = self.interaction.ask("DeepSeek V3 (free)", command, self.conversation, False)
+                                self.conversation = self.interaction.ask(self.current_model, command, self.conversation, False)
                                 
                                 if self.conversation.empty():
                                         print("AI not available. Returning to initial state.\n")
