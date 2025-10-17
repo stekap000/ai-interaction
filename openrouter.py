@@ -8,6 +8,7 @@ from custom_types import Model
 from models import models
 
 api_url = 'https://openrouter.ai/api/v1/chat/completions'
+default_config_file = "config.json"
 
 free_models = dict([(name, model) for name, model in models.items() if model.free])
 
@@ -168,20 +169,28 @@ class Config:
                                 json_data = json.loads(f.read())
                                 return Config(json_data["api_key"], json_data["timeout"], json_data["default_model"])
                 except FileNotFoundError:
-                        if input("Missing configuration. Create new (y/n): ") == "y":
-                                with open(config_file, "w") as f:
-                                        new_config = Config()
-                                        new_config.api_key = input("\tAPI key: ")
-                                        # Set default timeout without asking.
-                                        new_config.timeout = 10
-                                        new_config.default_model = "DeepSeek V3 (free)"
-                                        print("\tDefault model set to \"DeepSeek V3 (free)\". You can change it after.")
-                                        f.write(json.dumps(new_config.__dict__, indent = 4))
-                                        print("\tConfiguration created. File name: config.json")
-                                        return new_config
+                        new_config = Config()
+
+                        if input("Missing configuration. Create new configuration now? (y/n): ") == "y":
+                                new_config.api_key = input("\tAPI key: ")
+                                # Set default timeout and model without asking.
+                                new_config.timeout = 10
+                                new_config.default_model = "DeepSeek V3 (free)"
+                                print("\tDefault model set to \"DeepSeek V3 (free)\". You can change it after.")
+
+                                new_config.save(config_file)
+                                print(f"\tConfiguration created. File name: {config_file}\n")
+
+                                return new_config
+                        else:
+                                exit()
                 except:
                         pass
-                        
+
+        def save(self, config_file):
+                with open(config_file, "w") as f:
+                        f.write(json.dumps(self.__dict__, indent = 4))
+
 class AIInteraction:
         def __init__(self, config):
                 self.config = config
@@ -346,19 +355,21 @@ class CommandHandler:
 
         def help(self):
                 print("Commands:")
-                print("\tnew    - Start a new conversation.")
-                print("\told    - Continue old conversation.")
-                print("\tsave   - Save new conversation that was previously started.")
-                print("\tdelete - Delete conversation.")
-                print("\tclear  - Clear terminal/console.")
-                print("\tlist   - List existing conversations.")
-                print("\tfree   - Shows free models.")
-                print("\tmodels - Shows all models.")
-                print("\tmodel  - Shows the current model and offers the change of the current model.")
-                print("\tinfo   - Shows basic information for some conversation.")
-                print("\thelp   - Show this help text.")
-                print("\tback   - Go from conversation to initial mode.")
-                print("\texit   - Exit the program.")
+                print("\tnew                - Start a new conversation.")
+                print("\told                - Continue old conversation.")
+                print("\tsave               - Save new conversation that was previously started.")
+                print("\tdelete             - Delete conversation.")
+                print("\tclear              - Clear terminal/console.")
+                print("\tlist               - List existing conversations.")
+                print("\tfree               - Shows free models.")
+                print("\tmodels             - Shows all models.")
+                print("\tmodel              - Shows the current model and offers the change of the current model.")
+                print("\tconfig.<attribute> - Shows the current value for the configuration attribute <attribute> and")
+                print("\t                     offers the change of this attribute.")
+                print("\tinfo               - Shows basic information for some conversation.")
+                print("\thelp               - Show this help text.")
+                print("\tback               - Go from conversation to initial mode.")
+                print("\texit               - Exit the program.")
 
         def exit(self):
                 self.cli.running = False
@@ -386,7 +397,6 @@ class CLI:
                 self.running = False
 
         def start(self):
-                self.command_handler.clear()
                 print("Enter 'help' for short help manual.\n")
                 print(f"Current model: {self.current_model}\n")
                 self.command_handler.list()
@@ -401,6 +411,21 @@ class CLI:
                         if self.command_handler.execute(command.lower()):
                                 continue
 
+                        if command.lower().startswith("config."):
+                                config_attribute = command.split(".")[1]
+                                attribute_value = getattr(self.config, config_attribute, None)
+                                if attribute_value != None:
+                                        print(f"\tOld value: {attribute_value}")
+                                        new_attribute_value = input(f"\tNew value: ")
+                                        if new_attribute_value != "":
+                                                if type(attribute_value) == type(0):
+                                                        new_attribute_value = int(new_attribute_value)
+
+                                                setattr(self.config, config_attribute, new_attribute_value)
+                                                self.config.save(default_config_file)
+                                                print("\tConfiguration updated.")
+                                continue
+
                         if self.state == CLIState.conversation:
                                 if command.lower() == "back":
                                         self.state = CLIState.initial
@@ -408,9 +433,9 @@ class CLI:
                                         continue
                                 elif command.lower() == "save":
                                         if self.conversation.nameless():
-                                                name  =        input("\tName         : ")
+                                                name         = input("\tName         : ")
                                                 abbreviation = input("\tAbbreviation : ")
-                                                topic =        input("\tTopic        : ")
+                                                topic        = input("\tTopic        : ")
                                                 self.conversation.save_new(name, abbreviation, topic)
                                         else:
                                                 self.conversation.save_existing()
@@ -454,12 +479,16 @@ class CLI:
                                         else:
                                                 print("\tDeletion canceled.")
 
+# TODO(stekap): Try to unify command handling.
+#
+# TODO(stekap): Handle kill signal (ctrl c).
+#
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission. Also, we keep less information locally.
 # TODO(stekap): Add UI that can be started with a command, which will display the chat more nicely and correctly display
 #               things like latex.
 def main():
-        CLI(Config.load("config.json")).start()
-        
+        CLI(Config.load(default_config_file)).start()
+
 if __name__ == "__main__":
         main()
