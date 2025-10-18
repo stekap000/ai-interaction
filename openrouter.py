@@ -12,6 +12,42 @@ default_config_file = "config.json"
 
 free_models = dict([(name, model) for name, model in models.items() if model.free])
 
+class ModelGrabber:
+        @staticmethod
+        def grab_models():
+                url = "https://openrouter.ai/api/frontend/models/find?"
+                headers = {"Content-Type" : "application/json; charset=utf-8"}
+
+                response = requests.get(url)
+                models_data = response.json()["data"]["models"]
+                models = []
+
+                with open("models.py", "w") as f:
+                        f.write("# Generated with model_grabber.py\n\n")
+                        f.write("from custom_types import Model\n\n")
+                        f.write("models = {\n")
+
+                        print(f"\tGrabbed {len(models_data)} models.")
+
+                        for model_data in models_data:
+                                m = Model(model_data["author"],
+                                          model_data["short_name"],
+                                          model_data["slug"],
+                                          int(model_data["context_length"]),
+                                          False)
+
+                                if model_data["endpoint"] != None:
+                                        m.free = (model_data["endpoint"]["variant"] == "free")
+                                elif "free" in model_data["slug"]:
+                                        m.free = True;
+
+                                try:
+                                        f.write("\t" + "'" + m.name + "' : " + m.code_string() + ",\n")
+                                except Exception as e:
+                                        pass
+
+                        f.write("}\n")
+
 class ErrorCode:
         valid   = 0,
         invalid = 1
@@ -403,6 +439,11 @@ class CommandHandler:
         def exit(self):
                 self.cli.running = False
 
+        def update(self):
+                if self.cli.state == CLIState.initial:
+                        ModelGrabber.grab_models()
+                        exit()
+
         def help(self):
                 print("Commands:")
                 print("\tnew                - Start a new conversation.")
@@ -495,14 +536,13 @@ class CLI:
                         elif self.state == CLIState.initial:
                                 pass
 
-# TODO(stekap): Try to unify command handling.
-#
 # TODO(stekap): Handle kill signal (ctrl c).
 #
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission. Also, we keep less information locally.
 # TODO(stekap): Add UI that can be started with a command, which will display the chat more nicely and correctly display
 #               things like latex.
+
 def main():
         CLI(Config.load(default_config_file)).start()
 
