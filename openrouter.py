@@ -326,14 +326,53 @@ class CommandHandler:
         def __init__(self, cli):
                 self.cli = cli
         
+
+
+        def new(self):
+                if self.cli.state == CLIState.initial:
+                        self.cli.state = CLIState.conversation
+                        self.cli.conversation = Conversation()
+
+        def old(self):
+                if self.cli.state == CLIState.initial:
+                        abbreviation = input("\tAbbreviation : ")
+                        self.cli.conversation = Conversation.existing(abbreviation)
+                        if self.cli.conversation.empty():
+                                print("\tConversation does not exist.")
+                        else:
+                                self.cli.state = CLIState.conversation
+                                print("")
+                                self.cli.conversation.print_content()
+
+        def save(self):
+                if self.cli.state == CLIState.conversation:
+                        if self.cli.conversation.nameless():
+                                name         = input("\tName         : ")
+                                abbreviation = input("\tAbbreviation : ")
+                                topic        = input("\tTopic        : ")
+                                self.cli.conversation.save_new(name, abbreviation, topic)
+                        else:
+                                self.cli.conversation.save_existing()
+
+                        print("\tSaved.")
+
+        def delete(self):
+                if self.cli.state == CLIState.initial:
+                        abbreviation = input("\tAbbreviation: ")
+                        if input(f"\tConversation [{abbreviation}] will be deleted. Confirm (y/n) : ") == "y":
+                                try:
+                                        os.remove("conversations/" + abbreviation + ".json")
+                                        print("\tConversation deleted.")
+                                except Exception:
+                                        print("\tConversation does not exist.")
+                        else:
+                                print("\tDeletion canceled.")
+
         def clear(self):
                 os.system("cls" if os.name == "nt" else "clear")
 
         def list(self):
                 Conversation.print_all()
-
-        def info(self):
-                Conversation.info(input("\tAbbreviation : "))
 
         def free(self):
                 print(f"Free models (Total Count: {len(free_models)}):")
@@ -343,7 +382,7 @@ class CommandHandler:
         def models(self):
                 print(f"Available models (Total Count: {len(models)}):")
                 for model in models.values():
-                        print(f"\t{model.name}")      
+                        print(f"\t{model.name}")
 
         def model(self):
                 print(f"Current model: {self.cli.current_model}")
@@ -353,29 +392,41 @@ class CommandHandler:
                 else:
                         print("\tGiven model doesn't exist.")
 
+        def info(self):
+                Conversation.info(input("\tAbbreviation : "))
+
+        def back(self):
+                if self.cli.state == CLIState.conversation:
+                        self.cli.state = CLIState.initial
+                        self.cli.conversation = Conversation()
+
+        def exit(self):
+                self.cli.running = False
+
         def help(self):
                 print("Commands:")
                 print("\tnew                - Start a new conversation.")
                 print("\told                - Continue old conversation.")
-                print("\tsave               - Save new conversation that was previously started.")
+                print("\tsave               - Save the current conversation. If it already exists, it is updated.")
+                print("\t                     If it doesn't exist, then it will be created based on the prompt.")
                 print("\tdelete             - Delete conversation.")
                 print("\tclear              - Clear terminal/console.")
                 print("\tlist               - List existing conversations.")
-                print("\tfree               - Shows free models.")
-                print("\tmodels             - Shows all models.")
-                print("\tmodel              - Shows the current model and offers the change of the current model.")
-                print("\tconfig.<attribute> - Shows the current value for the configuration attribute <attribute> and")
-                print("\t                     offers the change of this attribute.")
-                print("\tinfo               - Shows basic information for some conversation.")
-                print("\thelp               - Show this help text.")
-                print("\tback               - Go from conversation to initial mode.")
+                print("\tfree               - Show free models.")
+                print("\tmodels             - Show all models.")
+                print("\tmodel              - Show the current model and allow the change of the current model.")
+                print("\tinfo               - Show the basic information for some conversation.")
+                print("\tback               - Switch from conversation to initial mode.")
                 print("\texit               - Exit the program.")
+                print("\thelp               - Show this help text.")
+                print("\tconfig.<attribute> - Show the current value for the configuration attribute <attribute> and")
+                print("\t                     allow the change of this attribute.")
 
-        def exit(self):
-                self.cli.running = False
-                
         def execute(self, command):
                 try:
+                        if command == "":
+                                return True
+
                         CommandHandler.__dict__[command](self)
                         return True
                 except Exception:
@@ -419,7 +470,11 @@ class CLI:
                                         new_attribute_value = input(f"\tNew value: ")
                                         if new_attribute_value != "":
                                                 if type(attribute_value) == type(0):
-                                                        new_attribute_value = int(new_attribute_value)
+                                                        try:
+                                                                new_attribute_value = int(new_attribute_value)
+                                                        except:
+                                                                print("\tInvalid input. Value must be of integer type for this attribute.")
+                                                                continue
 
                                                 setattr(self.config, config_attribute, new_attribute_value)
                                                 self.config.save(default_config_file)
@@ -427,23 +482,6 @@ class CLI:
                                 continue
 
                         if self.state == CLIState.conversation:
-                                if command.lower() == "back":
-                                        self.state = CLIState.initial
-                                        self.conversation = Conversation()
-                                        continue
-                                elif command.lower() == "save":
-                                        if self.conversation.nameless():
-                                                name         = input("\tName         : ")
-                                                abbreviation = input("\tAbbreviation : ")
-                                                topic        = input("\tTopic        : ")
-                                                self.conversation.save_new(name, abbreviation, topic)
-                                        else:
-                                                self.conversation.save_existing()
-                                        print("\tSaved.")
-                                        continue
-                                elif command == "":
-                                        continue
-
                                 print("")
                                 self.conversation = self.interaction.ask(self.current_model, command, self.conversation, False)
                                 
@@ -455,29 +493,7 @@ class CLI:
                                         print(response)
                                         print("")
                         elif self.state == CLIState.initial:
-                                command = command.lower()
-                                if command == "new":
-                                        self.state = CLIState.conversation
-                                        self.conversation = Conversation()
-                                elif command == "old":
-                                        self.state = CLIState.conversation
-                                        abbreviation = input("\tAbbreviation : ")
-                                        self.conversation = Conversation.existing(abbreviation)
-                                        if self.conversation.empty():
-                                                self.state = CLIState.initial
-                                                print("\tConversation does not exist.")
-                                                continue
-                                        print("")
-                                        self.conversation.print_content()
-                                elif command == "delete":
-                                        abbreviation = input("\tAbbreviation: ")
-                                        if input(f"\tConversation [{abbreviation}] will be deleted. Confirm (y/n) : ") == "y":
-                                                try:
-                                                        os.remove("conversations/" + abbreviation + ".json")
-                                                except Exception:
-                                                        print("\tConversation does not exist.")
-                                        else:
-                                                print("\tDeletion canceled.")
+                                pass
 
 # TODO(stekap): Try to unify command handling.
 #
