@@ -3,7 +3,6 @@ import json
 import os
 from datetime import datetime as dt
 
-import models
 from custom_types import Model
 from models import models
 
@@ -18,35 +17,47 @@ class ModelGrabber:
                 url = "https://openrouter.ai/api/frontend/models/find?"
                 headers = {"Content-Type" : "application/json; charset=utf-8"}
 
-                response = requests.get(url)
-                models_data = response.json()["data"]["models"]
-                models = []
+                try:
+                        response = requests.get(url)
+                        models_data = response.json()["data"]["models"]
+                except:
+                        print("\tModel grabbing failed.")
+                        return
+
+                # Clear these in order to update them for the current session (in addition to generating models.py).
+                models.clear()
+                free_models.clear()
 
                 with open("models.py", "w") as f:
-                        f.write("# Generated with model_grabber.py\n\n")
+                        f.write("# Generated with ModelGrabber.grab_models()\n\n")
                         f.write("from custom_types import Model\n\n")
                         f.write("models = {\n")
 
-                        print(f"\tGrabbed {len(models_data)} models.")
+                        # This is used to ensure that the generated models dictionary syntax is valid (that '}' is placed at the end).
+                        try:
+                                print(f"\tGrabbed {len(models_data)} models.")
 
-                        for model_data in models_data:
-                                m = Model(model_data["author"],
-                                          model_data["short_name"],
-                                          model_data["slug"],
-                                          int(model_data["context_length"]),
-                                          False)
+                                for model_data in models_data:
+                                        m = Model(model_data["author"],
+                                                  model_data["short_name"],
+                                                  model_data["slug"],
+                                                  int(model_data["context_length"]),
+                                                  False)
 
-                                if model_data["endpoint"] != None:
-                                        m.free = (model_data["endpoint"]["variant"] == "free")
-                                elif "free" in model_data["slug"]:
-                                        m.free = True;
+                                        if model_data["endpoint"] != None:
+                                                m.free = (model_data["endpoint"]["variant"] == "free")
+                                        elif "free" in model_data["slug"]:
+                                                m.free = True;
 
-                                try:
+                                        models[m.name] = m
+                                        if m.free:
+                                                free_models[m.name] = m
+
                                         f.write("\t" + "'" + m.name + "' : " + m.code_string() + ",\n")
-                                except Exception as e:
-                                        pass
 
-                        f.write("}\n")
+                                f.write("}\n")
+                        except:
+                                f.write("}\n")
 
 class ErrorCode:
         valid   = 0,
@@ -440,9 +451,7 @@ class CommandHandler:
                 self.cli.running = False
 
         def update(self):
-                if self.cli.state == CLIState.initial:
-                        ModelGrabber.grab_models()
-                        exit()
+                ModelGrabber.grab_models()
 
         def help(self):
                 print("Commands:")
@@ -459,6 +468,7 @@ class CommandHandler:
                 print("\tinfo               - Show the basic information for some conversation.")
                 print("\tback               - Switch from conversation to initial mode.")
                 print("\texit               - Exit the program.")
+                print("\tupdate             - Grab available models.")
                 print("\thelp               - Show this help text.")
                 print("\tconfig.<attribute> - Show the current value for the configuration attribute <attribute> and")
                 print("\t                     allow the change of this attribute.")
@@ -537,7 +547,6 @@ class CLI:
                                 pass
 
 # TODO(stekap): Handle kill signal (ctrl c).
-#
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission. Also, we keep less information locally.
 # TODO(stekap): Add UI that can be started with a command, which will display the chat more nicely and correctly display
