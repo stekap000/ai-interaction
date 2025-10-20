@@ -204,7 +204,7 @@ class Conversation:
                         print("\n" + message["content"] + "\n")
 
 class Config:
-        def __init__(self, api_key = "", timeout = 10, default_model = "DeepSeek V3 (free)"):
+        def __init__(self, api_key = "", timeout = 10, default_model = "DeepSeek V3.1 (free)"):
                 self.api_key = api_key;
                 self.timeout = timeout
                 self.default_model = default_model
@@ -222,8 +222,8 @@ class Config:
                                 new_config.api_key = input("\tAPI key: ")
                                 # Set default timeout and model without asking.
                                 new_config.timeout = 10
-                                new_config.default_model = "DeepSeek V3 (free)"
-                                print("\tDefault model set to \"DeepSeek V3 (free)\". You can change it after.")
+                                new_config.default_model = "DeepSeek V3.1 (free)"
+                                print("\tDefault model set to \"DeepSeek V3.1 (free)\". You can change it after.")
 
                                 new_config.save(config_file)
                                 print(f"\tConfiguration created. File name: {config_file}\n")
@@ -373,8 +373,6 @@ class CommandHandler:
         def __init__(self, cli):
                 self.cli = cli
         
-
-
         def new(self):
                 if self.cli.state == CLIState.initial:
                         self.cli.state = CLIState.conversation
@@ -483,7 +481,6 @@ class CommandHandler:
                 except Exception:
                         return False
 
-# TODO(stekap): Maybe add support to go back through multiple states. Currently it is not needed.
 class CLIState:
         initial      = 0
         conversation = 1
@@ -549,8 +546,6 @@ class CLI:
 # TODO(stekap): Handle kill signal (ctrl c).
 # TODO(stekap): Add conversation compression that is also done by AI, so that we send only the main points and thus
 #               increase the speed of conversation transmission. Also, we keep less information locally.
-# TODO(stekap): Add UI that can be started with a command, which will display the chat more nicely and correctly display
-#               things like latex.
 
 def main():
         CLI(Config.load(default_config_file)).start()
