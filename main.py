@@ -8,6 +8,7 @@ from models import models
 
 api_url = 'https://openrouter.ai/api/v1/chat/completions'
 default_config_file = "config.json"
+default_conversations_path = "conversations"
 
 free_models = dict([(name, model) for name, model in models.items() if model.free])
 
@@ -145,7 +146,7 @@ class Conversation:
 
         @staticmethod
         def existing(abbreviation):
-                path = "conversations/" + abbreviation + ".json"
+                path = default_conversations_path + "/" + abbreviation + ".json"
                 if os.path.isfile(path):
                         with open(path, "r") as f:
                                 json_data = json.loads(f.read())
@@ -155,7 +156,7 @@ class Conversation:
         @staticmethod
         def print_all():
                 print("Existing conversations:")
-                for i, abbreviation in enumerate(os.listdir("conversations")):
+                for i, abbreviation in enumerate(os.listdir(default_conversations_path)):
                         print(f"\t{i + 1}. {abbreviation[:abbreviation.find('.')]}")
 
         @staticmethod
@@ -177,7 +178,7 @@ class Conversation:
                 self.name = name
                 self.abbreviation = abbreviation
                 self.topic = topic
-                path = "conversations/" + abbreviation + ".json"
+                path = default_conversations_path + "/" + abbreviation + ".json"
                 with open(path, "w") as f:
                         f.write(json.dumps(self.__dict__, indent = 4))
 
@@ -406,7 +407,7 @@ class CommandHandler:
                         abbreviation = input("\tAbbreviation: ")
                         if input(f"\tConversation [{abbreviation}] will be deleted. Confirm (y/n) : ") == "y":
                                 try:
-                                        os.remove("conversations/" + abbreviation + ".json")
+                                        os.remove(default_conversations_path + "/" + abbreviation + ".json")
                                         print("\tConversation deleted.")
                                 except Exception:
                                         print("\tConversation does not exist.")
@@ -548,6 +549,9 @@ class CLI:
 #               increase the speed of conversation transmission. Also, we keep less information locally.
 
 def main():
+        if not os.path.exists(default_conversations_path):
+                os.makedirs(default_conversations_path)
+
         CLI(Config.load(default_config_file)).start()
 
 if __name__ == "__main__":
