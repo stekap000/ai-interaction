@@ -454,23 +454,28 @@ class CommandHandler:
 
         def help(self):
                 print("Commands:")
-                print("\tnew                - Start a new conversation.")
-                print("\told                - Continue old conversation.")
-                print("\tsave               - Save the current conversation. If it already exists, it is updated.")
-                print("\t                     If it doesn't exist, then it will be created based on the prompt.")
-                print("\tdelete             - Delete conversation.")
-                print("\tclear              - Clear terminal/console.")
-                print("\tlist               - List existing conversations.")
-                print("\tfree               - Show free models.")
-                print("\tmodels             - Show all models.")
-                print("\tmodel              - Show the current model and allow the change of the current model.")
-                print("\tinfo               - Show the basic information for some conversation.")
-                print("\tback               - Switch from conversation to initial mode.")
-                print("\texit               - Exit the program.")
-                print("\tupdate             - Grab available models.")
-                print("\thelp               - Show this help text.")
-                print("\tconfig.<attribute> - Show the current value for the configuration attribute <attribute> and")
-                print("\t                     allow the change of this attribute.")
+                print("\tBoth modes:")
+                print("\t\tclear              - Clear terminal/console.")
+                print("\t\tlist               - List existing conversations.")
+                print("\t\tfree               - Show free models.")
+                print("\t\tmodels             - Show all models.")
+                print("\t\tmodel              - Show the current model and allow the change of the current model.")
+                print("\t\tinfo               - Show the basic information for some conversation.")
+                print("\t\texit               - Exit the program.")
+                print("\t\tupdate             - Grab available models.")
+                print("\t\thelp               - Show this help text.")
+                print("\t\tconfig.<attribute> - Show the current value for the configuration attribute <attribute> and")
+                print("\t\t                     allow the change of this attribute.")
+
+                print("\tInitial mode:")
+                print("\t\tnew                - Start a new conversation.")
+                print("\t\told                - Continue old conversation.")
+                print("\t\tdelete             - Delete conversation.")
+
+                print("\tConversation mode:")
+                print("\t\tsave               - Save the current conversation. If it already exists, it is updated.")
+                print("\t\t                     If it doesn't exist, then it will be created based on the prompt.")
+                print("\t\tback               - Switch from conversation to initial mode.")
 
         def execute(self, command):
                 try:
@@ -497,7 +502,7 @@ class CLI:
                 self.running = False
 
         def start(self):
-                print("Enter 'help' for short help manual.\n")
+                print("Enter 'help' for a short help manual.\n")
                 print(f"Current model: {self.current_model}\n")
                 self.command_handler.list()
                 print("")
